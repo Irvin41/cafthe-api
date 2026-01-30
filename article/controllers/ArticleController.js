@@ -1,5 +1,9 @@
 // Contrômeur articles
-const { getALLArticles, getArticleById } = require("../models/ArticleModel");
+const {
+  getALLArticles,
+  getArticleById,
+  getArticleByCategory,
+} = require("../models/ArticleModel");
 
 // Récupérer tous les articles
 const getALL = async (req, res) => {
@@ -43,4 +47,26 @@ const getById = async (req, res) => {
     });
   }
 };
-module.exports = { getALL, getById };
+
+// Récupérer les produits par catégorie
+const getByCategory = async (req, res) => {
+  try {
+    const { categorie } = req.params;
+    const articles = await getArticleByCategory(categorie);
+
+    res.json({
+      message: `Article de la catégorie ${categorie}`,
+      count: articles.length,
+      articles,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur de récupération des articles triés par catégorie",
+      error.message,
+    );
+    res.status(500).json({
+      message: "Erreur de récupération des articles triés par catégorie",
+    });
+  }
+};
+module.exports = { getALL, getById, getByCategory };

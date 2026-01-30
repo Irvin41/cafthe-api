@@ -14,4 +14,12 @@ const getArticleById = async (id) => {
   ]);
   return rows;
 };
-module.exports = { getALLArticles, getArticleById };
+
+// Récupérer un article pas sa catégorie
+const getArticleByCategory = async (categorie) => {
+  const [rows] = await db.query("SELECT * FROM article WHERE CATEGORIE = ?", [
+    categorie,
+  ]);
+  return rows;
+};
+module.exports = { getALLArticles, getArticleById, getArticleByCategory };

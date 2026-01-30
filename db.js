@@ -1,17 +1,17 @@
 // permet de configurer le pool de connexion a MySQL
-// permet de faire des requêtes assynchrones async/ await
+// permet de faire des requêtes asynchrones async/ await
 
 const mysql = require("mysql2/promise");
 require("dotenv").config();
 
-// POOL de conexion
-// permet de gerer plusieurs connexion simultanées
+// POOL de connexion
+// permet de gérer plusieurs connexions simultanées
 // réutiliser les connexions existantes
 // gestion automatique de la disponibilité
 // limite le nbe de connexion ( en même temps )
 
 const db = mysql.createPool({
-  // paramètre de connexion ( host, nom utilisateu MDP nom de la BDD
+  // paramètre de connexion ( host, nom utilisateur MDP nom de la BDD
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -21,11 +21,11 @@ const db = mysql.createPool({
   // si plus de connexion dispo alors elles attendent
   waitForConnections: true,
 
-  // parametre de limiter le nbe MAX de co
+  // paramètre de limiter le nbe MAX de co
   connectionLimit: 10,
 
   // paramètres optionnel mais recommandé
-  // en cas d'échec de co, rééssayer
+  // en cas d'échec de co, réessayer
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   // timeout de connexion
@@ -37,13 +37,13 @@ const db = mysql.createPool({
     const connection = await db.getConnection();
     console.log("Connecté à la base de données MySql");
 
-    // Se deconnecte
+    // Se déconnecte
 
     connection.release();
   } catch (err) {
     console.error("erreur de connection à MySql : ", err.message);
 
-    // arrete l'app avec code erreur 1
+    // arrête l'app avec code erreur 1
     process.exit(1);
   }
 })();
