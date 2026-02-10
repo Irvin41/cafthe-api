@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
+
 // permet de charger les variable d'environnement depuis .env
 require("dotenv").config();
 
@@ -21,16 +23,21 @@ app.use(express.json());
 // logger de requête HTTP dans la console
 app.use(morgan("dev"));
 
+//sert les fichier statiques (images, produit)
+app.use(express.static("public"));
 // permet les requêtes croos-origin ( qui viennet du front )
 //CORS = CrossOrigin Ressource Sharing
 // obligatoire sinon le nav bloque les requêtes
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost.5173",
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credential: true,
   }),
 );
+// Parser les cookies dans req
+app.use(cookieParser());
 
 //ROUTE
 

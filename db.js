@@ -13,6 +13,7 @@ require("dotenv").config();
 const db = mysql.createPool({
   // paramètre de connexion ( host, nom utilisateur MDP nom de la BDD
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,

@@ -12,9 +12,9 @@ const { verifyToken } = require("../../middleware/authMiddleware");
 const router = express.Router();
 
 // GET /api/articles - récupérer tout les articles
-router.get("/", verifyToken, getALL);
+router.get("/", getALL);
 
-// GET /api/article/:id - récupérer un artcile par son id
+// GET /api/article/:id - récupérer un article par son id
 router.get("/:id", getById);
 
 // GET /api/article/categorie/:categorie - récupérer les articles d'une catégorie

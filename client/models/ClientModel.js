@@ -3,6 +3,14 @@
 const db = require("../../db");
 const bcrypt = require("bcryptjs");
 
+//rechercher un client par son id
+const findClientById = async (id) => {
+  const [rows] = await db.query("SELECT * FROM client WHERE id_client = ?", [
+    id,
+  ]);
+  return rows;
+};
+
 // rechercher un client par son e-mail
 const findClientByEmail = async (email) => {
   const [rows] = await db.query("SELECT * FROM CLIENT WHERE MAIL_CLIENT = ?", [
@@ -64,4 +72,5 @@ module.exports = {
   createClient,
   hashPassword,
   comparePassword,
+  findClientById,
 };

@@ -7,23 +7,25 @@ const { restart } = require("nodemon");
 // verification du token
 
 const verifyToken = (req, res, next) => {
-  // Récupérer le header d'Authorization
-  const authHeader = req.headers["authorization"];
+  // Cherche le token dans le cookie HttpOnly
+  let token = req.cookies && req.cookies.token;
 
-  if (!authHeader) {
-    return res.status(403).json({
-      message: "Token manquant",
-    });
-  }
+  // header Authorization
+  if (!token) {
+    const authHeader = req.headers["authorization"];
 
-  // format attendu : "Bearer <token>"
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
-    return res.status(403).json({
-      message: "Format de token invalide",
-    });
+    if (!authHeader) {
+      return res.status(403).json({ message: "Token manquant" });
+    }
+
+    const parts = authHeader.split(" ");
+
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      return res.status(403).json({ message: "Format de token invalide" });
+    }
+
+    token = parts[1];
   }
-  const token = parts[1]; // <token>
 
   // vérifier le token
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {

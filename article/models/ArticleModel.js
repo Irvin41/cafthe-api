@@ -4,7 +4,8 @@ const db = require("../../db");
 
 // Récupérer tout les article
 const getALLArticles = async () => {
-  const [rows] = await db.query("SELECT * FROM article");
+  const [rows] = await db.query("SELECT * FROM article order by id_article");
+  console.log(rows);
   return rows;
 };
 // Récupérer un article par son ID
