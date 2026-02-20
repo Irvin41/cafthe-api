@@ -1,31 +1,27 @@
-// Contrôleur CLIENT
 const {
   findClientById,
   findClientByEmail,
   hashPassword,
   createClient,
   comparePassword,
+  saveResetToken,
+  findClientByToken,
 } = require("../models/ClientModel");
 const jwt = require("jsonwebtoken");
-// Inscription
+const db = require("../../db");
+const crypto = require("crypto");
 
+// ── Inscription ──────────────────────────────────────────────────────
 const register = async (req, res) => {
   try {
     const { nom, prenom, email, mot_de_passe } = req.body;
-    // vérifier si l'email existe deja
     const existingClient = await findClientByEmail(email);
-
     if (existingClient.length > 0) {
-      return res.status(400).json({
-        message: "L'adresse mail est déjà utilisée",
-      });
+      return res
+        .status(400)
+        .json({ message: "L'adresse mail est déjà utilisée" });
     }
-
-    // Hacher mot de passe
     const hash = await hashPassword(mot_de_passe);
-
-    // Créer le Client
-
     const result = await createClient({
       nom,
       prenom,
@@ -38,56 +34,35 @@ const register = async (req, res) => {
       client: { nom, prenom, email },
     });
   } catch (error) {
-    console.error("Erreur inscription", error.message);
-    res.status(500).json({
-      message: "Erreur lors de l'inscription",
-    });
+    res.status(500).json({ message: "Erreur lors de l'inscription" });
   }
 };
 
-//connexion
+// ── Connexion ────────────────────────────────────────────────────────
 const login = async (req, res) => {
   try {
     const { email, mot_de_passe } = req.body;
-
-    // rechercher client
     const clients = await findClientByEmail(email);
-
     if (clients.length === 0) {
-      return res.status(401).json({
-        message: "Identifiants incorrects",
-      });
+      return res.status(401).json({ message: "Identifiants incorrects" });
     }
     const client = clients[0];
-
-    // verifier le mot de passe
     const isMatch = await comparePassword(mot_de_passe, client.MDP_CLIENT);
-
     if (!isMatch) {
-      return res.status(401).json({
-        message: "Identifiant incorrects, veuillez réessayer",
-      });
+      return res.status(401).json({ message: "Identifiant incorrects" });
     }
-
-    // Générer le token JWT
-    //expire en seconde
     const expire = parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600;
     const token = jwt.sign(
-      {
-        id: client.id_client,
-        email: client.MAIL_CLIENT,
-      },
+      { id: client.id_client, email: client.MAIL_CLIENT },
       process.env.JWT_SECRET,
       { expiresIn: expire },
     );
-    //On place le token dans un cookie HttpOnly
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // mettre sur true en HTTPS
+      secure: false,
       sameSite: "lax",
       maxAge: expire * 1000,
     });
-
     res.json({
       message: "connexion réussie",
       client: {
@@ -98,50 +73,157 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Erreur connexion utilisateur", error.message);
-    res.status(500).json({
-      message: "Erreur lors de la connexion",
-    });
+    res.status(500).json({ message: "Erreur lors de la connexion" });
   }
 };
 
-const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: false, // mettre sur true en HTTPS
-    sameSite: "lax",
-  });
-  res.json({ message: "Déconnexion réussie" });
-};
-
-//Le nav envoie automatiquement le cookie
-//le middleware vérifie le JWT
-//Si le token est valide, on retourne les infos du client
+// ── Session courante (getMe) ──────────────────────────────────────────
 const getMe = async (req, res) => {
   try {
-    // req.client.id vient du JWT decode par le middleware verifyToken
     const clients = await findClientById(req.client.id);
-
-    if (clients.length === 0) {
+    if (clients.length === 0)
       return res.status(404).json({ message: "Client introuvable" });
-    }
 
     const client = clients[0];
-
     res.json({
       client: {
         id: client.id_client,
-        nom: client.NOM_client,
-        prenom: client.PRENOM_client,
-        email: client.EMAIL_client,
+        nom: client.NOM_CLIENT,
+        prenom: client.PRENOM_CLIENT,
+        email: client.MAIL_CLIENT,
+        adresse: client.ADRESSE_LIVRAISON,
+        code_postal: client.CP_LIVRAISON,
+        ville: client.VILLE_LIVRAISON,
+        telephone: client.TELEPHONE_CLIENT,
+        points_fidelite: client.points_fidelite,
+        numero_fidelite: client.numero_fidelite,
       },
     });
   } catch (error) {
-    console.error("Erreur /me:", error.message);
-    res
-      .status(500)
-      .json({ message: "Erreur lors de la vérification de session" });
+    res.status(500).json({ message: "Erreur session" });
   }
 };
 
-module.exports = { register, login, logout, getMe };
+// ── Récupérer un client par son id ───────────────────────────────────
+const getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Utilisation des noms exacts issus du fichier SQL
+    const [rows] = await db.query(
+      `SELECT
+         id_client,
+         PRENOM_CLIENT AS prenom,
+         NOM_CLIENT AS nom,
+         MAIL_CLIENT AS email,
+         TELEPHONE_CLIENT AS telephone,
+         ADRESSE_LIVRAISON AS adresse,
+         CP_LIVRAISON AS code_postal,
+         VILLE_LIVRAISON AS ville,
+         points_fidelite,
+         numero_fidelite,
+         date_inscription
+       FROM client WHERE id_client = ?`,
+      [parseInt(id)],
+    );
+    if (rows.length === 0)
+      return res.status(404).json({ message: "Client non trouvé" });
+    res.json({ client: rows[0] });
+  } catch (error) {
+    console.error("Erreur SQL:", error.message);
+    res.status(500).json({ message: "Erreur de récupération" });
+  }
+};
+
+// ── Mettre à jour un client ──────────────────────────────────────────
+const updateClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      prenom,
+      nom,
+      email,
+      telephone,
+      adresse,
+      code_postal,
+      ville,
+      mot_de_passe,
+    } = req.body;
+
+    let passHash = null;
+    if (mot_de_passe && mot_de_passe.trim() !== "") {
+      passHash = await hashPassword(mot_de_passe);
+    }
+
+    // Mise à jour des colonnes SQL selon ta structure
+    const query = `
+      UPDATE client
+      SET PRENOM_CLIENT = ?,
+          NOM_CLIENT = ?,
+          MAIL_CLIENT = ?,
+          TELEPHONE_CLIENT = ?,
+          ADRESSE_LIVRAISON = ?,
+          CP_LIVRAISON = ?,
+          VILLE_LIVRAISON = ?
+        ${passHash ? ", MDP_CLIENT = ?" : ""}
+      WHERE id_client = ?`;
+
+    const params = [prenom, nom, email, telephone, adresse, code_postal, ville];
+    if (passHash) params.push(passHash);
+    params.push(parseInt(id));
+
+    await db.query(query, params);
+    res.json({ message: "Profil mis à jour avec succès" });
+  } catch (error) {
+    console.error("Erreur SQL Update:", error.message);
+    res.status(500).json({ message: "Erreur de mise à jour" });
+  }
+};
+
+// ── Autres fonctions (Inchangées) ────────────────────────────────────
+const logout = (req, res) => {
+  res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
+  res.json({ message: "Déconnexion réussie" });
+};
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const clients = await findClientByEmail(email);
+    if (clients.length > 0) {
+      const token = crypto.randomBytes(20).toString("hex");
+      const expires = Date.now() + 3600000;
+      await saveResetToken(email, token, expires);
+    }
+    res.json({ message: "Si cet email existe, un lien a été envoyé." });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur" });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, mot_de_passe } = req.body;
+    const clients = await findClientByToken(token);
+    if (clients.length === 0)
+      return res.status(400).json({ message: "Lien invalide" });
+    const hash = await hashPassword(mot_de_passe);
+    await db.query(
+      "UPDATE client SET MDP_CLIENT = ?, reset_token = NULL, reset_expires = NULL WHERE id_client = ?",
+      [hash, clients[0].id_client],
+    );
+    res.json({ message: "Mot de passe modifié." });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur" });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  logout,
+  getMe,
+  getById,
+  updateClient,
+  forgotPassword,
+  resetPassword,
+};

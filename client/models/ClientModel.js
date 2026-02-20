@@ -1,5 +1,3 @@
-// model Client
-
 const db = require("../../db");
 const bcrypt = require("bcryptjs");
 
@@ -19,58 +17,47 @@ const findClientByEmail = async (email) => {
   return rows;
 };
 
+// --- NOUVEAU : Gérer les tokens de reset ---
+const saveResetToken = async (email, token, expires) => {
+  return await db.query(
+    "UPDATE CLIENT SET reset_token = ?, reset_expires = ? WHERE MAIL_CLIENT = ?",
+    [token, expires, email],
+  );
+};
+
+const findClientByToken = async (token) => {
+  const [rows] = await db.query(
+    "SELECT * FROM CLIENT WHERE reset_token = ? AND reset_expires > ?",
+    [token, Date.now()],
+  );
+  return rows;
+};
+
 // Créer un nouveau client
 const createClient = async (clientData) => {
-  const {
-    nom,
-    prenom,
-    adresse_livraison,
-    cp_livraison,
-    ville_livraison,
-    adresse_de_facturation,
-    cp_facturation,
-    ville_facturation,
-    telephone,
-    email,
-    mot_de_passe,
-  } = clientData;
-
+  const { nom, prenom, email, mot_de_passe } = clientData;
   const [result] = await db.query(
-    `INSERT INTO CLIENT (NOM_CLIENT, PRENOM_CLIENT, ADRESSE_LIVRAISON,
-  CP_LIVRAISON, VILLE_LIVRAISON, ADRESSE_FACTURATION, CP_FACTURATION, VILLE_FACTURATION,
-  TELEPHONE_CLIENT, MAIL_CLIENT, MDP_CLIENT) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [
-      nom,
-      prenom,
-      adresse_livraison || null,
-      cp_livraison || null,
-      ville_livraison || null,
-      adresse_de_facturation || null,
-      cp_facturation || null,
-      ville_facturation || null,
-      telephone || null,
-      email,
-      mot_de_passe,
-    ],
+    `INSERT INTO CLIENT (NOM_CLIENT, PRENOM_CLIENT, MAIL_CLIENT, MDP_CLIENT) VALUES (?,?,?,?)`,
+    [nom, prenom, email, mot_de_passe],
   );
   return result;
 };
-// Hacher un mot de passe
+
 const hashPassword = async (password) => {
   const rounds = parseInt(process.env.BCRYPT_ROUNDS || 10);
   return await bcrypt.hash(password, rounds);
-
-  // AUTRE TECHNIQUE : return await bcrypt.hash(password, parseInt(process.env.BCRYPT_ROUNDS || 10));
 };
 
-// Comparer un mot de passe
 const comparePassword = async (password, hash) => {
   return await bcrypt.compare(password, hash);
 };
+
 module.exports = {
   findClientByEmail,
   createClient,
   hashPassword,
   comparePassword,
   findClientById,
+  saveResetToken,
+  findClientByToken,
 };

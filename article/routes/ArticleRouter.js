@@ -6,18 +6,25 @@ const {
   getALL,
   getById,
   getByCategory,
+  getBestSeller,
+  getFavoriteProduct, // ← controller, pas le model directement
 } = require("../controllers/ArticleController");
-const { getArticleByCategory } = require("../models/ArticleModel");
 const { verifyToken } = require("../../middleware/authMiddleware");
 const router = express.Router();
 
-// GET /api/articles - récupérer tout les articles
+// GET /api/articles
 router.get("/", getALL);
 
-// GET /api/article/:id - récupérer un article par son id
-router.get("/:id", getById);
+// GET /api/articles/bestseller - AVANT /:id
+router.get("/bestseller", getBestSeller);
 
-// GET /api/article/categorie/:categorie - récupérer les articles d'une catégorie
+// GET /api/articles/favoris/:id_client - AVANT /:id
+router.get("/favoris/:id_client", getFavoriteProduct); // ← controller
+
+// GET /api/articles/categorie/:categorie - AVANT /:id
 router.get("/categorie/:categorie", getByCategory);
+
+// GET /api/articles/:id - EN DERNIER
+router.get("/:id", getById);
 
 module.exports = router;

@@ -1,8 +1,10 @@
-// Contrômeur articles
+// Contrôleur articles
 const {
   getALLArticles,
   getArticleById,
   getArticleByCategory,
+  getBestSellers,
+  getFavoriteProducts,
 } = require("../models/ArticleModel");
 
 // Récupérer tous les articles
@@ -22,6 +24,40 @@ const getALL = async (req, res) => {
   }
 };
 
+const getBestSeller = async (req, res) => {
+  try {
+    const articles = await getBestSellers();
+
+    res.json({
+      message: "Articles importés avec succès",
+      count: articles.length,
+      articles,
+    });
+  } catch (error) {
+    console.error("Erreur de récupération des articles best-sellers:", error);
+    res.status(500).json({
+      message: "Erreur lors de la récupération des articles",
+    });
+  }
+};
+
+const getFavoriteProduct = async (req, res) => {
+  try {
+    const { id_client } = req.params; // ou req.user.id si vous utilisez un middleware d'authentification
+    const articles = await getFavoriteProducts(id_client);
+
+    res.json({
+      message: "Produits favoris récupérés avec succès",
+      count: articles.length,
+      articles,
+    });
+  } catch (error) {
+    console.error("Erreur de récupération des produits favoris:", error);
+    res.status(500).json({
+      message: "Erreur lors de la récupération des produits favoris",
+    });
+  }
+};
 // Récupérer un article par son id
 const getById = async (req, res) => {
   try {
@@ -69,4 +105,10 @@ const getByCategory = async (req, res) => {
     });
   }
 };
-module.exports = { getALL, getById, getByCategory };
+module.exports = {
+  getALL,
+  getById,
+  getByCategory,
+  getBestSeller,
+  getFavoriteProduct,
+};
