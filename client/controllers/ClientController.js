@@ -49,7 +49,7 @@ const login = async (req, res) => {
     const client = clients[0];
     const isMatch = await comparePassword(mot_de_passe, client.MDP_CLIENT);
     if (!isMatch) {
-      return res.status(401).json({ message: "Identifiant incorrects" });
+      return res.status(401).json({ message: "Identifiants incorrects" });
     }
     const expire = parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600;
     const token = jwt.sign(
@@ -64,7 +64,7 @@ const login = async (req, res) => {
       maxAge: expire * 1000,
     });
     res.json({
-      message: "connexion réussie",
+      message: "Connexion réussie",
       client: {
         id: client.id_client,
         nom: client.NOM_CLIENT,
@@ -80,7 +80,7 @@ const login = async (req, res) => {
 // ── Session courante (getMe) ──────────────────────────────────────────
 const getMe = async (req, res) => {
   try {
-    const clients = await findClientById(req.client.id);
+    const clients = await findClientById(req.user.id); // ✅ corrigé : req.user au lieu de req.client
     if (clients.length === 0)
       return res.status(404).json({ message: "Client introuvable" });
 
@@ -108,7 +108,6 @@ const getMe = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const { id } = req.params;
-    // Utilisation des noms exacts issus du fichier SQL
     const [rows] = await db.query(
       `SELECT
          id_client,
@@ -141,25 +140,39 @@ const updateClient = async (req, res) => {
     const {
       prenom,
       nom,
-      email,
       telephone,
       adresse,
       code_postal,
       ville,
       mot_de_passe,
+      mot_de_passe_actuel,
     } = req.body;
 
     let passHash = null;
     if (mot_de_passe && mot_de_passe.trim() !== "") {
+      const [rows] = await db.query(
+        "SELECT MDP_CLIENT FROM client WHERE id_client = ?",
+        [parseInt(id)],
+      );
+      if (rows.length === 0)
+        return res.status(404).json({ message: "Client non trouvé" });
+
+      const isMatch = await comparePassword(
+        mot_de_passe_actuel,
+        rows[0].MDP_CLIENT,
+      );
+      if (!isMatch)
+        return res
+          .status(401)
+          .json({ message: "Ancien mot de passe incorrect" });
+
       passHash = await hashPassword(mot_de_passe);
     }
 
-    // Mise à jour des colonnes SQL selon ta structure
     const query = `
       UPDATE client
       SET PRENOM_CLIENT = ?,
           NOM_CLIENT = ?,
-          MAIL_CLIENT = ?,
           TELEPHONE_CLIENT = ?,
           ADRESSE_LIVRAISON = ?,
           CP_LIVRAISON = ?,
@@ -167,7 +180,7 @@ const updateClient = async (req, res) => {
         ${passHash ? ", MDP_CLIENT = ?" : ""}
       WHERE id_client = ?`;
 
-    const params = [prenom, nom, email, telephone, adresse, code_postal, ville];
+    const params = [prenom, nom, telephone, adresse, code_postal, ville];
     if (passHash) params.push(passHash);
     params.push(parseInt(id));
 
@@ -178,13 +191,13 @@ const updateClient = async (req, res) => {
     res.status(500).json({ message: "Erreur de mise à jour" });
   }
 };
-
-// ── Autres fonctions (Inchangées) ────────────────────────────────────
+// ── Déconnexion ──────────────────────────────────────────────────────
 const logout = (req, res) => {
   res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
   res.json({ message: "Déconnexion réussie" });
 };
 
+// ── Mot de passe oublié ──────────────────────────────────────────────
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -199,7 +212,30 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({ message: "Erreur" });
   }
 };
+// ── Vérifier l'ancien mot de passe ( fonction privée )
+const checkPassword = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const { mot_de_passe_actuel } = req.body;
 
+    const [rows] = await db.query(
+      "SELECT MDP_CLIENT FROM client WHERE id_client = ?",
+      [parseInt(id)],
+    );
+    if (rows.length === 0)
+      return res.status(404).json({ message: "Client non trouvé" });
+
+    const isMatch = await comparePassword(
+      mot_de_passe_actuel,
+      rows[0].MDP_CLIENT,
+    );
+    if (!isMatch) return false;
+    else if (isMatch) return true;
+  } catch (error) {
+    console.error("Erreur vérification mdp:", error.message);
+  }
+};
+// ── Réinitialisation du mot de passe
 const resetPassword = async (req, res) => {
   try {
     const { token, mot_de_passe } = req.body;
@@ -213,6 +249,7 @@ const resetPassword = async (req, res) => {
     );
     res.json({ message: "Mot de passe modifié." });
   } catch (error) {
+    console.error("Erreur resetPassword:", error);
     res.status(500).json({ message: "Erreur" });
   }
 };
@@ -224,6 +261,7 @@ module.exports = {
   getMe,
   getById,
   updateClient,
+  checkPassword,
   forgotPassword,
   resetPassword,
 };

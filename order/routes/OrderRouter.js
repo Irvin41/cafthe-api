@@ -7,6 +7,8 @@ const {
   getById,
   create,
   updateStatut,
+  checkout, // ← ajouter
+  confirmation, // ← ajouter
 } = require("../controllers/OrderController");
 const { verifyToken } = require("../../middleware/authMiddleware");
 const router = express.Router();
@@ -16,14 +18,19 @@ const router = express.Router();
 // GET /api/commandes/client/:id_client - AVANT /:id
 router.get("/client/:id_client", getByClient);
 
-// GET /api/commandes/:id - récupérer une commande par son id
-// ⚠️ DOIT ÊTRE EN DERNIER car capture tout ce qui n'a pas matché avant
+// GET /api/commandes/confirmation
+router.get("/confirmation", confirmation); // ← ajouter
+
+// GET /api/commandes/:id
 router.get("/:id", getById);
 
-// POST /api/commandes - créer une commande
+// POST /api/commandes - créer une commande classique
 router.post("/", create);
 
-// PATCH /api/commandes/:id/statut - mettre à jour le statut
+// POST /api/commandes/checkout - créer une commande + PaymentIntent Stripe
+router.post("/checkout", checkout); // ← ajouter
+
+// PATCH /api/commandes/:id/statut
 router.patch("/:id/statut", updateStatut);
 
 module.exports = router;

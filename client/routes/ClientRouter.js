@@ -11,6 +11,7 @@ const {
   updateClient,
   resetPassword,
   forgotPassword,
+  checkPassword,
 } = require("../controllers/ClientController");
 const { verifyToken } = require("../../middleware/authMiddleware");
 
@@ -29,19 +30,16 @@ router.post("/register", register);
 // Connexion
 // POST /api/client/login
 router.post("/login", login);
+// Gestion mot de passe
+router.post("/forgot-password", forgotPassword);
+router.post("/check-password", verifyToken, checkPassword);
+router.post("/reset-password", resetPassword);
 
 // Récupérer un client par son id
 // GET /api/client/:id
 router.get("/:id", verifyToken, getById);
-
 // Mettre à jour un client
 // PUT /api/client/:id
-router.put("/:id", verifyToken, updateClient);
-// Nouvelles routes
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
-
-router.get("/:id", verifyToken, getById);
 router.put("/:id", verifyToken, updateClient);
 
 module.exports = router;

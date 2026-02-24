@@ -12,7 +12,6 @@ const db = require("./db");
 const articlesRoutes = require("./article/routes/ArticleRouter");
 const clientRoutes = require("./client/routes/ClientRouter");
 const orderRoutes = require("./order/routes/OrderRouter");
-const http = require("node:http");
 
 const app = express();
 
@@ -20,11 +19,12 @@ app.use(express.json());
 app.use(morgan("dev"));
 app.use(express.static("public"));
 app.use("/images", express.static(path.join(__dirname, "public/images")));
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    credentials: true,
+    credentials: true, // Crucial pour AuthContext et les sessions
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -34,6 +34,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "API fonctionnelle" });
 });
 
+// === Utilisation des routes ===
 app.use("/api/articles", articlesRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/commandes", orderRoutes);
@@ -45,4 +46,6 @@ app.use((req, res) => {
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "localhost";
 
-app.listen(port, host, () => {});
+app.listen(port, host, () => {
+  console.log(`Serveur démarré sur http://${host}:${port}`);
+});

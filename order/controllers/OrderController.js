@@ -6,6 +6,7 @@ const {
   updateStatutCommande,
 } = require("../models/OrderModel");
 const db = require("../../db");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Récupérer toutes les commandes d'un client
 const getByClient = async (req, res) => {
@@ -41,7 +42,67 @@ const getById = async (req, res) => {
       .json({ message: "Erreur lors de la récupération de la commande" });
   }
 };
+const checkout = async (req, res) => {
+  try {
+    const { id_client, articles } = req.body;
 
+    if (!id_client || !articles || articles.length === 0) {
+      return res.status(400).json({ message: "Données manquantes" });
+    }
+
+    // 1. Créer la commande en BDD
+    const commande = await createCommande(id_client, articles);
+
+    // 2. Créer le PaymentIntent Stripe
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(commande.total_ttc * 100), // en centimes
+      currency: "eur",
+      metadata: {
+        id_commande: commande.id_commande.toString(),
+        id_client: id_client.toString(),
+      },
+    });
+
+    // 3. Sauvegarder le stripe_payment_intent_id
+    await db.query(
+      `UPDATE COMMANDE SET stripe_payment_intent_id = ? WHERE id_commande = ?`,
+      [paymentIntent.id, commande.id_commande],
+    );
+
+    res.status(201).json({
+      message: "Commande créée, paiement en attente",
+      id_commande: commande.id_commande,
+      clientSecret: paymentIntent.client_secret, // envoyé au frontend
+    });
+  } catch (error) {
+    console.error("Erreur checkout", error.message);
+    res.status(500).json({ message: "Erreur lors du checkout" });
+  }
+};
+// ── NOUVEAU : Page de confirmation après redirect Stripe ──
+const confirmation = async (req, res) => {
+  try {
+    const { payment_intent, redirect_status } = req.query;
+
+    if (redirect_status !== "succeeded") {
+      return res.status(400).json({ message: "Paiement échoué ou annulé" });
+    }
+
+    const [rows] = await db.query(
+      `SELECT * FROM COMMANDE WHERE stripe_payment_intent_id = ?`,
+      [payment_intent],
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Commande introuvable" });
+    }
+
+    res.json({ message: "Paiement confirmé", commande: rows[0] });
+  } catch (error) {
+    console.error("Erreur confirmation", error.message);
+    res.status(500).json({ message: "Erreur lors de la confirmation" });
+  }
+};
 // Créer une nouvelle commande + mettre à jour les points fidélité
 const create = async (req, res) => {
   try {
@@ -121,4 +182,11 @@ const updateStatut = async (req, res) => {
   }
 };
 
-module.exports = { getByClient, getById, create, updateStatut };
+module.exports = {
+  getByClient,
+  getById,
+  create,
+  updateStatut,
+  checkout,
+  confirmation,
+};

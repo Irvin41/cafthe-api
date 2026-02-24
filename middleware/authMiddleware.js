@@ -2,15 +2,12 @@
 // Vérifie que le token JWT est valide pour protéger les routes
 
 const jwt = require("jsonwebtoken");
-const { restart } = require("nodemon");
-
-// verification du token
 
 const verifyToken = (req, res, next) => {
   // Cherche le token dans le cookie HttpOnly
   let token = req.cookies && req.cookies.token;
 
-  // header Authorization
+  // Sinon, cherche dans le header Authorization
   if (!token) {
     const authHeader = req.headers["authorization"];
 
@@ -27,21 +24,17 @@ const verifyToken = (req, res, next) => {
     token = parts[1];
   }
 
-  // vérifier le token
+  // Vérifier le token
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       if (err.name === "TokenExpiredError") {
-        return res.status(401).json({
-          message: "Token Expiré",
-        });
+        return res.status(401).json({ message: "Token expiré" });
       }
-      return res.status(401).json({
-        message: "Token Invalide",
-      });
+      return res.status(401).json({ message: "Token invalide" });
     }
 
-    // Token valide : on ajoute les infos du client à la requête
-    req.client = decoded;
+    // Token valide : on expose les infos via req.user (id = id_client)
+    req.user = decoded;
     next();
   });
 };
