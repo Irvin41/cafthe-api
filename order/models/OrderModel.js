@@ -17,7 +17,7 @@ const getCommandesByClient = async (id_client) => {
   const commandesAvecArticles = await Promise.all(
     commandes.map(async (cmd) => {
       const [articles] = await db.query(
-        "SELECT a.id_article, a.nom_article, a.image, c.`quantité` AS quantite FROM contenir c INNER JOIN article a ON c.id_article = a.id_article WHERE c.id_commande = ?",
+        "SELECT a.id_article, a.nom_article, a.image, c.`quantité` AS quantite, c.poids FROM contenir c INNER JOIN article a ON c.id_article = a.id_article WHERE c.id_commande = ?",
         [cmd.id_commande],
       );
       return { ...cmd, articles };
@@ -42,7 +42,7 @@ const getCommandeById = async (id_commande) => {
   if (rows.length === 0) return null;
 
   const [articles] = await db.query(
-    "SELECT a.id_article, a.nom_article, a.image, c.`quantité` AS quantite FROM contenir c INNER JOIN article a ON c.id_article = a.id_article WHERE c.id_commande = ?",
+    "SELECT a.id_article, a.nom_article, a.image, c.`quantité` AS quantite, c.poids FROM contenir c INNER JOIN article a ON c.id_article = a.id_article WHERE c.id_commande = ?",
     [id_commande],
   );
 
@@ -54,16 +54,17 @@ const createCommande = async (id_client, articles) => {
     id_article: parseInt(a.id_article),
     quantite: parseInt(a.quantite),
     prix_ttc: parseFloat(a.prix_ttc),
+    poids: a.poids ?? null,
   }));
 
-  // ← Regroupe si même id_article (ex: 500g + 250g du même café)
+  // Grouper par id_article + poids (pour différencier 250g et 500g du même produit)
   const articlesGroupes = Object.values(
     articlesNormalises.reduce((acc, a) => {
-      if (acc[a.id_article]) {
-        acc[a.id_article].quantite += a.quantite;
-        acc[a.id_article].prix_ttc += a.prix_ttc; // total cumulé
+      const key = `${a.id_article}_${a.poids ?? ""}`;
+      if (acc[key]) {
+        acc[key].quantite += a.quantite;
       } else {
-        acc[a.id_article] = { ...a };
+        acc[key] = { ...a };
       }
       return acc;
     }, {}),
@@ -83,13 +84,14 @@ const createCommande = async (id_client, articles) => {
 
   for (const article of articlesGroupes) {
     await db.query(
-      "INSERT INTO contenir (id_commande, id_article, `quantité`) VALUES (?, ?, ?)",
-      [id_commande, article.id_article, article.quantite],
+      "INSERT INTO contenir (id_commande, id_article, `quantité`, poids) VALUES (?, ?, ?, ?)",
+      [id_commande, article.id_article, article.quantite, article.poids],
     );
   }
 
   return getCommandeById(id_commande);
 };
+
 const updateStatutCommande = async (id_commande, statut) => {
   await db.query(`UPDATE commande SET STATUT = ? WHERE id_commande = ?`, [
     statut,

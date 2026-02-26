@@ -11,34 +11,52 @@ const jwt = require("jsonwebtoken");
 const db = require("../../db");
 const crypto = require("crypto");
 
-// ── Inscription ──────────────────────────────────────────────────────
+// ── Inscription ──
+
 const register = async (req, res) => {
   try {
-    const { nom, prenom, email, mot_de_passe } = req.body;
+    const { email, mot_de_passe } = req.body;
+
     const existingClient = await findClientByEmail(email);
     if (existingClient.length > 0) {
       return res
         .status(400)
         .json({ message: "L'adresse mail est déjà utilisée" });
     }
+
     const hash = await hashPassword(mot_de_passe);
-    const result = await createClient({
-      nom,
-      prenom,
-      email,
-      mot_de_passe: hash,
+    const result = await createClient({ email, mot_de_passe: hash });
+
+    // Créer le JWT comme dans login
+    const expire = parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600;
+    const token = jwt.sign(
+      { id: result.insertId, email },
+      process.env.JWT_SECRET,
+      { expiresIn: expire },
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: expire * 1000,
     });
+
     res.status(201).json({
       message: "Inscription réussie",
-      client_id: result.insertId,
-      client: { nom, prenom, email },
+      client: {
+        id: result.insertId,
+        email,
+        points_fidelite: 100,
+      },
     });
   } catch (error) {
+    console.error("Erreur enregistrement:", error);
     res.status(500).json({ message: "Erreur lors de l'inscription" });
   }
 };
 
-// ── Connexion ────────────────────────────────────────────────────────
+// ── Connexion
 const login = async (req, res) => {
   try {
     const { email, mot_de_passe } = req.body;
@@ -110,18 +128,21 @@ const getById = async (req, res) => {
     const { id } = req.params;
     const [rows] = await db.query(
       `SELECT
-         id_client,
-         PRENOM_CLIENT AS prenom,
-         NOM_CLIENT AS nom,
-         MAIL_CLIENT AS email,
-         TELEPHONE_CLIENT AS telephone,
-         ADRESSE_LIVRAISON AS adresse,
-         CP_LIVRAISON AS code_postal,
-         VILLE_LIVRAISON AS ville,
-         points_fidelite,
-         numero_fidelite,
-         date_inscription
-       FROM client WHERE id_client = ?`,
+     id_client,
+     PRENOM_CLIENT AS prenom,
+     NOM_CLIENT AS nom,
+     MAIL_CLIENT AS email,
+     TELEPHONE_CLIENT AS telephone,
+     ADRESSE_LIVRAISON AS adresse,
+     CP_LIVRAISON AS code_postal,
+     VILLE_LIVRAISON AS ville,
+     ADRESSE_FACTURATION AS adresse_facturation,
+     CP_FACTURATION AS code_postal_facturation,
+     VILLE_FACTURATION AS ville_facturation,
+     points_fidelite,
+     numero_fidelite,
+     date_inscription
+   FROM client WHERE id_client = ?`,
       [parseInt(id)],
     );
     if (rows.length === 0)
@@ -133,7 +154,6 @@ const getById = async (req, res) => {
   }
 };
 
-// ── Mettre à jour un client ──────────────────────────────────────────
 const updateClient = async (req, res) => {
   try {
     const { id } = req.params;
@@ -144,6 +164,9 @@ const updateClient = async (req, res) => {
       adresse,
       code_postal,
       ville,
+      adresse_facturation,
+      code_postal_facturation,
+      ville_facturation,
       mot_de_passe,
       mot_de_passe_actuel,
     } = req.body;
@@ -176,11 +199,24 @@ const updateClient = async (req, res) => {
           TELEPHONE_CLIENT = ?,
           ADRESSE_LIVRAISON = ?,
           CP_LIVRAISON = ?,
-          VILLE_LIVRAISON = ?
+          VILLE_LIVRAISON = ?,
+          ADRESSE_FACTURATION = ?,
+          CP_FACTURATION = ?,
+          VILLE_FACTURATION = ?
         ${passHash ? ", MDP_CLIENT = ?" : ""}
       WHERE id_client = ?`;
 
-    const params = [prenom, nom, telephone, adresse, code_postal, ville];
+    const params = [
+      prenom,
+      nom,
+      telephone,
+      adresse,
+      code_postal,
+      ville,
+      adresse_facturation,
+      code_postal_facturation,
+      ville_facturation,
+    ];
     if (passHash) params.push(passHash);
     params.push(parseInt(id));
 

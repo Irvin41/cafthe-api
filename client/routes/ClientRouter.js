@@ -16,7 +16,7 @@ const {
 const { verifyToken } = require("../../middleware/authMiddleware");
 
 // verification de session du client
-// GET /api/client/me  ⚠️ AVANT /:id sinon "me" sera capturé comme un id
+// GET /api/client/me  AVANT /:id sinon "me" sera capturé comme un id
 router.get("/me", verifyToken, getMe);
 
 // Déconnexion

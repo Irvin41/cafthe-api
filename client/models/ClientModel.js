@@ -35,10 +35,10 @@ const findClientByToken = async (token) => {
 
 // Créer un nouveau client
 const createClient = async (clientData) => {
-  const { nom, prenom, email, mot_de_passe } = clientData;
+  const { email, mot_de_passe } = clientData;
   const [result] = await db.query(
-    `INSERT INTO CLIENT (NOM_CLIENT, PRENOM_CLIENT, MAIL_CLIENT, MDP_CLIENT) VALUES (?,?,?,?)`,
-    [nom, prenom, email, mot_de_passe],
+    `INSERT INTO CLIENT ( MAIL_CLIENT, MDP_CLIENT, points_fidelite ) VALUES (?,?,?,?)`,
+    [email, mot_de_passe, 100],
   );
   return result;
 };
