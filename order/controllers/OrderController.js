@@ -7,6 +7,35 @@ const {
 } = require("../models/OrderModel");
 const db = require("../../db");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { createFacture } = require("../../facture/models/factureModel");
+
+// Helper : calcule et crée la facture pour une commande
+const genererFacture = async (id_commande, modePaiement) => {
+  const [lignes] = await db.query(
+    `SELECT a.prix_ht, a.taux_tva, a.prix_ttc, ct.\`quantité\` as quantite
+     FROM contenir ct
+            JOIN article a ON ct.id_article = a.id_article
+     WHERE ct.id_commande = ?`,
+    [id_commande],
+  );
+
+  if (!lignes.length) return null;
+
+  const montantHT = lignes.reduce((sum, l) => sum + l.prix_ht * l.quantite, 0);
+  const montantTTC = lignes.reduce(
+    (sum, l) => sum + l.prix_ttc * l.quantite,
+    0,
+  );
+  const montantTVA = montantTTC - montantHT;
+
+  return await createFacture(
+    id_commande,
+    montantHT.toFixed(2),
+    montantTVA.toFixed(2),
+    montantTTC.toFixed(2),
+    modePaiement || "CARTE",
+  );
+};
 
 // Récupérer toutes les commandes d'un client
 const getByClient = async (req, res) => {
@@ -42,20 +71,25 @@ const getById = async (req, res) => {
       .json({ message: "Erreur lors de la récupération de la commande" });
   }
 };
+
+// Créer une commande + PaymentIntent Stripe
 const checkout = async (req, res) => {
   try {
-    const { id_client, articles } = req.body;
+    const {
+      id_client,
+      articles,
+      remise_fidelite = 0,
+      mode_paiement = "Carte Bancaire",
+    } = req.body;
 
     if (!id_client || !articles || articles.length === 0) {
       return res.status(400).json({ message: "Données manquantes" });
     }
 
-    // 1. Créer la commande en BDD
     const commande = await createCommande(id_client, articles);
 
-    // 2. Créer le PaymentIntent Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(commande.total_ttc * 100), // en centimes
+      amount: Math.round(commande.total_ttc * 100),
       currency: "eur",
       metadata: {
         id_commande: commande.id_commande.toString(),
@@ -63,23 +97,27 @@ const checkout = async (req, res) => {
       },
     });
 
-    // 3. Sauvegarder le stripe_payment_intent_id
     await db.query(
-      `UPDATE COMMANDE SET stripe_payment_intent_id = ? WHERE id_commande = ?`,
-      [paymentIntent.id, commande.id_commande],
+      `UPDATE COMMANDE SET stripe_payment_intent_id = ?, remise_fidelite = ?, MODE_PAIEMENT = ? WHERE id_commande = ?`,
+      [paymentIntent.id, remise_fidelite, mode_paiement, commande.id_commande],
     );
+
+    // ── Facture auto ──
+    await genererFacture(commande.id_commande, mode_paiement);
+    console.log(`✅ Facture créée pour commande ${commande.id_commande}`);
 
     res.status(201).json({
       message: "Commande créée, paiement en attente",
       id_commande: commande.id_commande,
-      clientSecret: paymentIntent.client_secret, // envoyé au frontend
+      clientSecret: paymentIntent.client_secret,
     });
   } catch (error) {
     console.error("Erreur checkout", error.message);
     res.status(500).json({ message: "Erreur lors du checkout" });
   }
 };
-// ── NOUVEAU : Page de confirmation après redirect Stripe ──
+
+// Page de confirmation après redirect Stripe
 const confirmation = async (req, res) => {
   try {
     const { payment_intent, redirect_status } = req.query;
@@ -103,10 +141,16 @@ const confirmation = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la confirmation" });
   }
 };
-// Créer une nouvelle commande + mettre à jour les points fidélité
+
+// Créer une nouvelle commande + points fidélité
 const create = async (req, res) => {
   try {
-    const { id_client, articles } = req.body;
+    const {
+      id_client,
+      articles,
+      remise_fidelite = 0,
+      mode_paiement = "Paiement au comptoir",
+    } = req.body;
 
     if (!id_client || !articles || articles.length === 0) {
       return res.status(400).json({
@@ -116,7 +160,11 @@ const create = async (req, res) => {
 
     const commande = await createCommande(id_client, articles);
 
-    // ── Mise à jour points fidélité (1€ = 1 point) ──
+    await db.query(
+      `UPDATE COMMANDE SET remise_fidelite = ?, MODE_PAIEMENT = ? WHERE id_commande = ?`,
+      [remise_fidelite, mode_paiement, commande.id_commande],
+    );
+
     await db.query(
       `UPDATE client
        SET points_fidelite = (
@@ -127,6 +175,9 @@ const create = async (req, res) => {
        WHERE id_client = ?`,
       [id_client, id_client],
     );
+
+    await genererFacture(commande.id_commande, mode_paiement);
+    console.log(`✅ Facture créée pour commande ${commande.id_commande}`);
 
     res.status(201).json({ message: "Commande créée avec succès", commande });
   } catch (error) {
@@ -161,14 +212,13 @@ const updateStatut = async (req, res) => {
       return res.status(404).json({ message: "Commande non trouvée" });
     }
 
-    // ── Recalcule les points si statut change (ex: annulation) ──
     await db.query(
       `UPDATE client
        SET points_fidelite = (
          SELECT COALESCE(SUM(TOTAL), 0)
          FROM commande
          WHERE id_client = ? AND STATUT != 'ANNULE'
-       )
+         )
        WHERE id_client = ?`,
       [commande.id_client, commande.id_client],
     );

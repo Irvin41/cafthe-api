@@ -1,0 +1,182 @@
+/* components/FactureTemplate.css */
+
+.page {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    padding: 50px;
+    width: 794px;
+    color: #222;
+    position: relative;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.deco-gauche {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 130px;
+    background: #f5c5c5;
+}
+
+.deco-droite {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 65px;
+    height: 65px;
+    background: #e8a0a0;
+}
+
+/* ── En-tête ── */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+}
+
+.logo-nom {
+    font-size: 24px;
+    font-weight: 900;
+}
+
+.logo-sous {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #666;
+}
+
+.titre-facture {
+    font-size: 68px;
+    font-weight: 900;
+    letter-spacing: -3px;
+    line-height: 1;
+}
+
+/* ── Meta ── */
+
+.meta {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #222;
+    padding-bottom: 12px;
+    margin-bottom: 30px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ── Parties émetteur / destinataire ── */
+
+.parties {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+}
+
+.partie {
+    width: 45%;
+}
+
+.partie h4 {
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.partie p {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 2;
+}
+
+.partie-droite {
+    text-align: right;
+}
+
+/* ── Tableau ── */
+
+.facture-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+}
+
+.facture-table thead td {
+    font-weight: 700;
+    padding: 10px 0;
+    border-top: 2px solid #222;
+    border-bottom: 2px solid #222;
+    font-size: 13px;
+}
+
+.facture-table tbody td {
+    padding: 14px 0;
+    border-bottom: 1px solid #ddd;
+    font-size: 13px;
+}
+
+.facture-table td:nth-child(2),
+.facture-table td:nth-child(3) {
+    text-align: center;
+}
+
+.facture-table td:nth-child(4) {
+    text-align: right;
+    font-weight: 600;
+}
+
+/* ── Bas de page ── */
+
+.bas-page {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.reglement h4 {
+    font-size: 14px;
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+
+.reglement p {
+    font-size: 12px;
+    line-height: 1.9;
+}
+
+/* ── Totaux ── */
+
+.totaux {
+    width: 40%;
+}
+
+.ligne-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+.ligne-ttc {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 2px solid #222;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+/* ── Mentions légales ── */
+
+.mentions {
+    margin-top: 40px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+    font-size: 10px;
+    color: #666;
+    line-height: 1.8;
+}

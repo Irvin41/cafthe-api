@@ -12,6 +12,7 @@ const db = require("./db");
 const articlesRoutes = require("./article/routes/ArticleRouter");
 const clientRoutes = require("./client/routes/ClientRouter");
 const orderRoutes = require("./order/routes/OrderRouter");
+const factureRoutes = require("./facture/routes/factureRouter");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.get("/health", (req, res) => {
 app.use("/api/articles", articlesRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/commandes", orderRoutes);
+app.use("/api/facture", factureRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route non trouvée" });

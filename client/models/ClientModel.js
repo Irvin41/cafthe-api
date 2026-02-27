@@ -37,7 +37,7 @@ const findClientByToken = async (token) => {
 const createClient = async (clientData) => {
   const { email, mot_de_passe } = clientData;
   const [result] = await db.query(
-    `INSERT INTO CLIENT ( MAIL_CLIENT, MDP_CLIENT, points_fidelite ) VALUES (?,?,?,?)`,
+    `INSERT INTO CLIENT ( MAIL_CLIENT, MDP_CLIENT, points_fidelite ) VALUES (?,?,?)`,
     [email, mot_de_passe, 100],
   );
   return result;
