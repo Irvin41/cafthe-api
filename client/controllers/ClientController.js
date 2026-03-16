@@ -118,6 +118,7 @@ const getMe = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Erreur getMe:", error);
     res.status(500).json({ message: "Erreur session" });
   }
 };

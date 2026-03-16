@@ -53,12 +53,10 @@ const seed = async () => {
       commande.MODE_PAIEMENT || "CARTE",
     );
 
-    console.log(
-      `✅ Facture #${id} créée pour commande ${commande.id_commande}`,
-    );
+    console.log(`Facture #${id} créée pour commande ${commande.id_commande}`);
   }
 
-  console.log("✅ Seed terminé.");
+  console.log(" Seed terminé.");
   process.exit(0);
 };
 
