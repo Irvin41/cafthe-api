@@ -7,7 +7,7 @@ const {
   creerFacture,
   sauvegarderPDF,
   htmlToPDF,
-} = require("../controllers/Facturecontroller");
+} = require("../controllers/FactureController");
 
 router.post("/html-to-pdf", htmlToPDF);
 router.post("/", creerFacture);
