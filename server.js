@@ -12,7 +12,7 @@ const db = require("./db");
 const articlesRoutes = require("./article/routes/ArticleRouter");
 const clientRoutes = require("./client/routes/ClientRouter");
 const orderRoutes = require("./order/routes/OrderRouter");
-const factureRoutes = require("./facture/routes/Facturerouter");
+const factureRoutes = require("./facture/routes/FactureRouter");
 
 const app = express();
 
