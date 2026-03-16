@@ -7,7 +7,7 @@ const {
 } = require("../models/OrderModel");
 const db = require("../../db");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const { createFacture } = require("../../facture/models/factureModel");
+const { createFacture } = require("../../facture/models/FactureModel");
 
 // Helper : calcule et crée la facture pour une commande
 const genererFacture = async (id_commande, modePaiement) => {

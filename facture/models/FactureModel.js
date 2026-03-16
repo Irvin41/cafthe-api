@@ -1,4 +1,4 @@
-// models/factureModel.js
+// models/FactureModel.js
 
 const db = require("../../db");
 

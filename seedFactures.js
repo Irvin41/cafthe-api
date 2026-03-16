@@ -3,7 +3,7 @@
 
 require("dotenv").config();
 const db = require("./db");
-const { createFacture } = require("./facture/models/factureModel");
+const { createFacture } = require("./facture/models/FactureModel");
 
 const seed = async () => {
   // 1. Récupère toutes les commandes sans facture

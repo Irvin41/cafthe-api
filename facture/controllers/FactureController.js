@@ -5,7 +5,7 @@ const {
   getFactureByCommande,
   getLignesCommande,
   createFacture,
-} = require("../models/factureModel");
+} = require("../models/FactureModel");
 
 const FACTURES_DIR = path.join(__dirname, "..", "uploads", "factures");
 if (!fs.existsSync(FACTURES_DIR)) {
