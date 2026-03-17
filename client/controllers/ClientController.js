@@ -37,7 +37,7 @@ const register = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "lax",
       maxAge: expire * 1000,
     });
@@ -88,6 +88,7 @@ const login = async (req, res) => {
         nom: client.NOM_CLIENT,
         prenom: client.PRENOM_CLIENT,
         email: client.MAIL_CLIENT,
+        points_fidelite: client.points_fidelite,
       },
     });
   } catch (error) {
